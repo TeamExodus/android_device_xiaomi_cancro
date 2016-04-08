@@ -296,3 +296,6 @@ $(call inherit-product, frameworks/native/build/phone-xxhdpi-2048-hwui-memory.mk
 
 # call the proprietary setup
 $(call inherit-product, vendor/xiaomi/cancro/cancro-vendor.mk)
+
+# turn off dex preopt because of small system space
+WITH_DEXPREOPT := false
