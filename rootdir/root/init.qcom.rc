@@ -54,11 +54,12 @@ on boot
     write /sys/devices/system/cpu/cpu3/online 1
 
     # msm_thermal
-    write /sys/kernel/msm_thermal/low_thresh "1574400 45 43"
-    write /sys/kernel/msm_thermal/mid_thresh "1267200 50 47"
-    write /sys/kernel/msm_thermal/high_thresh "1190400 55 53"
-    write /sys/kernel/msm_thermal/sampling_ms 10000
+    write /sys/kernel/msm_thermal/zone0 "1728000 45 43"
+    write /sys/kernel/msm_thermal/zone1 "1574400 50 47"
+    write /sys/kernel/msm_thermal/zone2 "1267200 55 53"
     write /sys/kernel/msm_thermal/enabled 1
+
+    # msm_thermal (for power HAL usage)
     chown system system /sys/kernel/msm_thermal/user_maxfreq
     chmod 0660 /sys/kernel/msm_thermal/user_maxfreq
 
@@ -134,10 +135,6 @@ on boot
     # For bridgemgr daemon to inform the USB driver of the correct transport
     chown radio radio /sys/class/android_usb/f_rmnet_smd_sdio/transport
 
-    # For setting tcp delayed ack
-    chown system system /sys/kernel/ipv4/tcp_delack_seg
-    chown system system /sys/kernel/ipv4/tcp_use_userconfig
-
 #   Define TCP buffer sizes for various networks
 #   ReadMin, ReadInitial, ReadMax, WriteMin, WriteInitial, WriteMax,
     setprop net.tcp.buffersize.default 4096,87380,110208,4096,16384,110208
@@ -150,14 +147,6 @@ on boot
     setprop net.tcp.buffersize.edge    4093,26280,35040,4096,16384,35040
     setprop net.tcp.buffersize.gprs    4092,8760,11680,4096,8760,11680
     setprop net.tcp.buffersize.evdo    4094,87380,262144,4096,16384,262144
-
-# Define TCP delayed ack settings for WiFi & LTE
-    setprop net.tcp.delack.default     1
-    setprop net.tcp.delack.wifi        20
-    setprop net.tcp.delack.lte         8
-    setprop net.tcp.usercfg.default    0
-    setprop net.tcp.usercfg.wifi       1
-    setprop net.tcp.usercfg.lte        1
 
 # MDP idle notifier
     chown system graphics /sys/class/graphics/fb0/idle_time
@@ -245,9 +234,6 @@ on boot
     chown system system /sys/vibrator/pwmvalue
     chmod 0644 /sys/vibrator/pwmvalue
 
-    chown system system /sys/devices/virtual/graphics/fb0/rgb
-    chmod 0660 /sys/devices/virtual/graphics/fb0/rgb
-
     #charger
     chown root system /sys/module/qpnp_charger/parameters/charger_monitor
     chown root system /sys/module/qpnp_charger/parameters/ext_ovp_present
@@ -260,6 +246,19 @@ on boot
     chmod 0664 /sys/class/power_supply/battery/input_current_settled
     chmod 0664 /sys/class/power_supply/battery/voltage_min
     chmod 0664 /sys/module/qpnp_charger/parameters/charger_monitor
+
+on enable-low-power
+    write /sys/kernel/msm_thermal/enabled 0
+    write /sys/kernel/msm_thermal/zone0 "1728000 39 38"
+    write /sys/kernel/msm_thermal/zone1 "1574400 42 40"
+    write /sys/kernel/msm_thermal/zone2 "1497600 45 43"
+    write /sys/kernel/msm_thermal/zone3 "1267200 49 46"
+    write /sys/kernel/msm_thermal/zone4 "1190400 53 50"
+    write /sys/kernel/msm_thermal/zone5 "1036800 56 54"
+    write /sys/kernel/msm_thermal/zone6 "960000 62 60"
+    write /sys/kernel/msm_thermal/zone7 "729600 79 75"
+    write /sys/kernel/msm_thermal/sampling_ms 8000
+    write /sys/kernel/msm_thermal/enabled 1
 
 # msm specific files that need to be created on /data
 on post-fs-data
@@ -485,19 +484,8 @@ on property:bluetooth.dun.status=stopped
 on property:ro.bluetooth.ftm_enabled=true
     start ftmd
 
-service qcom-c_core-sh /system/bin/sh /init.qcom.class_core.sh
-    class core
-    user root
-    oneshot
-
-service qcom-c_main-sh /system/bin/sh /init.class_main.sh
-    class main
-    user root
-    oneshot
-
 on property:vold.decrypt=trigger_restart_framework
     start config_bt_addr
-    start qcom-c_main-sh
     start config_bluetooth
 
 on property:persist.env.fastdorm.enabled=true
@@ -615,7 +603,6 @@ service qmuxd /system/bin/qmuxd
     class main
     user radio
     group radio audio bluetooth gps qcom_diag
-    disabled
 
 service netmgrd /system/bin/netmgrd
     class main
@@ -840,22 +827,6 @@ on property:persist.ims.regmanager.mode=1
 on property:ro.data.large_tcp_window_size=true
     # Adjust socket buffer to enlarge TCP receive window for high bandwidth (e.g. DO-RevB)
     write /proc/sys/net/ipv4/tcp_adv_win_scale  2
-
-service ril-daemon1 /system/bin/rild -c 1
-    class main
-    socket rild1 stream 660 root radio
-    socket rild-debug1 stream 660 radio system
-    user root
-    disabled
-    group radio cache inet misc audio sdcard_r sdcard_rw diag qcom_diag log
-
-service ril-daemon2 /system/bin/rild -c 2
-    class main
-    socket rild2 stream 660 root radio
-    socket rild-debug2 stream 660 radio system
-    user root
-    disabled
-    group radio cache inet misc audio sdcard_r sdcard_rw diag qcom_diag log
 
 on property:usb_uicc.spi_bridge_enabled=1
     insmod /system/lib/modules/ice40-hcd.ko
