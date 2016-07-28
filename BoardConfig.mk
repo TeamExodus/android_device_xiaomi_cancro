@@ -142,6 +142,7 @@ TARGET_RECOVERY_LCD_BACKLIGHT_PATH := \"/sys/class/leds/lcd-backlight/brightness
 
 # CM Hardware
 BOARD_HARDWARE_CLASS += \
+    hardware/cyanogen/cmhw \
     $(CANCRO_PATH)/cmhw
 
 # No old RPC for prop
